@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Model lattice, gestalt view</title>
+<style>
+/* Tokens. Light is the bare :root palette; dark redefines only what changes,
+   so no colour has its single definition inside the media query. Taken from
+   the document's HTML reader (discrete.html / continuous.html / tabbed.html)
+   so this prototype reads like the same family of pages. */
+:root {
+  --bg: #fbfaf8;
+  --fg: #1b1a18;
+  --muted: #6b6660;
+  --rule: #ddd8d0;
+  --accent: #1a5fb4;
+  --accent-soft: #e8f0fb;
+  --card: #ffffff;
+  --entry: #9a5b0a;
+  --entry-soft: #fbe9d2;
+  --measure: 40rem;
+  --stage: 1700px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #16171a;
+    --fg: #e6e3de;
+    --muted: #9a948c;
+    --rule: #33353a;
+    --accent: #7fb2f0;
+    --accent-soft: #1d2836;
+    --card: #21232a;
+    --entry: #e3a446;
+    --entry-soft: #3a2c14;
+  }
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 17px/1.65 Georgia, "Iowan Old Style", "Times New Roman", serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+main {
+  max-width: var(--stage);
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 5rem;
+}
+
+.prose { max-width: var(--measure); }
+
+/* ------------------------------------------------------------------ chrome */
+
+.chrome {
+  max-width: var(--stage);
+  margin: 0 auto;
+  padding: .9rem 1.25rem .8rem;
+  display: flex;
+  align-items: center;
+  gap: .9rem;
+  font: .82rem/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--muted);
+  border-bottom: 1px solid var(--rule);
+}
+
+.chrome a, .chrome button, .chrome span.home {
+  color: var(--muted);
+  font: inherit;
+  text-decoration: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.chrome button:hover { color: var(--accent); }
+.chrome .spacer { flex: 1 1 auto; }
+
+.mocktag {
+  font: 600 .62rem/1 system-ui, sans-serif;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: .18em .38em;
+  vertical-align: .12em;
+}
+
+/* -------------------------------------------------------------------- text */
+
+h1 { font-size: 1.75rem; line-height: 1.25; margin: 1.6rem 0 .8rem; }
+h2 { font-size: 1.1rem; line-height: 1.3; margin: 2rem 0 .7rem; }
+
+.lede {
+  color: var(--muted);
+  font-size: .93rem;
+  line-height: 1.6;
+  border-left: 3px solid var(--rule);
+  padding-left: .9rem;
+  margin: 0 0 1.3rem;
+}
+
+p { margin: 0 0 1.1rem; }
+b, strong { font-weight: 700; }
+a { color: var(--accent); text-underline-offset: 2px; }
+a:visited { color: var(--accent); }
+
+/* ------------------------------------------------------------------ badges */
+
+.badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .55rem;
+  margin: 0 0 1.5rem;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  font: .78rem/1.3 system-ui, sans-serif;
+  color: var(--muted);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: .32rem .75rem;
+  background: var(--card);
+}
+
+/* ----------------------------------------------------------------- legend */
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.4rem;
+  align-items: center;
+  margin: 0 0 .9rem;
+  font: .82rem/1.3 system-ui, sans-serif;
+  color: var(--muted);
+}
+
+.legend-item { display: flex; align-items: center; gap: .5rem; }
+
+.legend-swatch {
+  width: 1.6rem;
+  height: 1rem;
+  border-radius: 4px;
+  flex: none;
+  display: inline-block;
+}
+
+.legend-swatch.treated { background: var(--accent-soft); border: 1.6px solid var(--accent); }
+.legend-swatch.untreated { background: var(--card); border: 1.6px dashed var(--rule); }
+
+.legend-swatch.entry {
+  width: 1rem; height: 1rem; border-radius: 999px;
+  background: var(--entry-soft); border: 2px solid var(--entry);
+}
+
+/* ------------------------------------------------------------------ stage */
+
+.stage {
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: var(--card);
+  padding: .5rem;
+  margin: 0 0 1.2rem;
+}
+
+svg#lattice { display: block; }
+
+.col-head {
+  font: 600 .68rem/1 system-ui, sans-serif;
+  fill: var(--muted);
+  text-anchor: middle;
+}
+.col-head tspan.n { fill: var(--fg); font-weight: 700; }
+
+.edge {
+  stroke: var(--rule);
+  stroke-width: 1.3;
+  opacity: .55;
+  transition: stroke .12s ease, opacity .12s ease, stroke-width .12s ease;
+}
+.edge.hi { stroke: var(--accent); stroke-width: 2.3; opacity: 1; }
+.edge.dim { opacity: .1; }
+
+a.node-link { cursor: pointer; }
+
+.node-box {
+  fill: var(--card);
+  stroke: var(--rule);
+  stroke-width: 1.4;
+  stroke-dasharray: 4 3;
+  transition: stroke .12s ease, fill .12s ease, stroke-width .12s ease, opacity .12s ease;
+}
+.node.treated .node-box {
+  fill: var(--accent-soft);
+  stroke: var(--accent);
+  stroke-dasharray: none;
+  stroke-width: 1.6;
+}
+a.node-link:hover .node-box, a.node-link:focus .node-box, .node.hi .node-box {
+  stroke: var(--accent);
+  stroke-width: 2.6;
+}
+.node.dim .node-box { opacity: .32; }
+.node.dim .node-fo { opacity: .32; }
+
+.node-fo { transition: opacity .12s ease; }
+.node-label {
+  font: 600 11px/1.22 system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--fg);
+  text-align: center;
+  padding: 3px 6px;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.node:not(.treated) .node-label { color: var(--muted); }
+
+.entry-badge circle {
+  fill: var(--entry-soft);
+  stroke: var(--entry);
+  stroke-width: 1.6;
+}
+.entry-badge text {
+  font: 700 10px/1 system-ui, sans-serif;
+  fill: var(--entry);
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+a.node-link:focus { outline: none; }
+
+/* ---------------------------------------------------------------- tooltip */
+
+#tooltip {
+  position: fixed;
+  pointer-events: none;
+  z-index: 30;
+  max-width: 21rem;
+  font: .8rem/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--fg);
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: 7px;
+  padding: .5rem .7rem;
+  box-shadow: 0 6px 18px rgba(0,0,0,.2);
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity .1s ease, transform .1s ease;
+}
+#tooltip.show { opacity: 1; transform: translateY(0); }
+#tooltip .t-name { font-weight: 700; display: block; margin-bottom: .18rem; }
+#tooltip .t-ing { color: var(--muted); }
+#tooltip .t-status { display: block; margin-top: .25rem; font-size: .74rem; color: var(--muted); }
+#tooltip .t-status.is-treated { color: var(--accent); }
+
+/* ------------------------------------------------------------------- fine */
+
+.fine {
+  font: .82rem/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--muted);
+  border-top: 1px solid var(--rule);
+  padding-top: 1.1rem;
+  margin-top: 1.6rem;
+  max-width: var(--measure);
+}
+.fine p { margin: 0 0 .9rem; }
+.fine b { color: var(--fg); }
+
+@media (max-width: 640px) {
+  main { padding: 1.1rem 1rem 4rem; }
+  .chrome { padding: .8rem 1rem .7rem; }
+}
+</style>
+</head>
+<body>
+<div class="chrome"><span class="home">⌂ Knowledge map</span><span class="mocktag">gestalt prototype</span><span class="spacer"></span><button type="button" id="back">← Back</button></div>
+<main>
+
+<div class="prose">
+<h1>The model lattice, all at once</h1>
+<p class="lede">Every model this document could build from five on/off ingredients &mdash; drift, noise, leverage, living&nbsp;expenses, constant&#8209;debt&#8209;to&#8209;assets maintenance &mdash; laid out as one graph. This is the alternative being weighed against a toggle&#8209;based node page: can seeing the whole shape at once, rather than switching flags one page at a time, communicate the space faster? No node has real content here on purpose &mdash; this page tests only whether the graph itself reads.</p>
+
+<div class="badge-row">
+<span class="badge">⏱ every node exists on both clocks &mdash; discrete and continuous time are a switch on the node page, not a dimension of this graph</span>
+<span class="badge">24 nodes · 52 edges · 11 treated</span>
+</div>
+</div>
+
+<h2>Reading the graph</h2>
+<div class="legend">
+<span class="legend-item"><span class="legend-swatch treated"></span>treated in the document</span>
+<span class="legend-item"><span class="legend-swatch untreated"></span>not treated (systematic label)</span>
+<span class="legend-item"><span class="legend-swatch entry"></span>suggested entry point</span>
+<span class="legend-item">hover a node to trace its edges · click to open it on the toggle page</span>
+</div>
+
+<div class="stage" id="stage">
+<svg id="lattice" xmlns="http://www.w3.org/2000/svg"></svg>
+</div>
+
+<div id="tooltip"></div>
+
+<div class="fine">
+<p><b>Layout.</b> Columns are ingredient count, left (0, the constant&#8209;price model) to right (5, every ingredient at once). Edges join states differing by exactly one ingredient &mdash; a Hasse diagram of the partial lattice described in <code>knowledge_map_plan.md</code>. Within each column, node order is a barycenter heuristic run over a few sweeps to reduce edge crossings; the two 7&#8209;node middle columns still cross a great deal, and that clutter is left visible rather than hidden &mdash; it is the honest answer to what this prototype is for.</p>
+
+<p><b>Treated vs. untreated, provisional.</b> The document's own sections were read to make this call, not guessed: the no&#8209;leverage price models (pure exponential, random walk, geometric Brownian motion, &sect;I&ndash;III) are treated, as is the deterministic leveraged branch (&sect;II.3&ndash;II.4, II.8: leveraged growth, constant debt&#8209;to&#8209;assets leverage, expense&#8209;funded debt) and the stochastic leveraged branch (&sect;IV, IV.2, Va: leverage under uncertainty and its living&#8209;expenses extension). Pure&#8209;noise&#8209;with&#8209;leverage combinations, and the remaining combinations lacking both drift and noise, are marked untreated as exotica or as degenerate (leverage on a non&#8209;moving price). One node lacking both is marked treated all the same: the living&#8209;expenses&#8209;only node, a pile of money earning nothing and spent down, which the toggle page derives in full on both clocks &mdash; no section of the linear document carries it, and the node's own text says so. One seam is genuinely blurred: Part&nbsp;IV.2's &ldquo;maintained assumption&rdquo; (leverage held constant) is definitionally the same condition as this graph's constant&#8209;debt&#8209;to&#8209;assets flag, so both the flagged and unflagged stochastic&#8209;leverage nodes are marked treated even though only the flagged one has a name of its own in the text. This boundary is an editorial call, not something the document settles.</p>
+</div>
+
+</main>
+
+<script>
+(function () {
+"use strict";
+
+var DATA = {"nodes":[{"id":"empty","ing":[],"layer":0,"x":115.0,"y":338.0,"name":"constant price","section":null,"treated":false,"entry":false},{"id":"dr","ing":["dr"],"layer":1,"x":415.0,"y":200.0,"name":"pure exponential","section":"sec:II.2","treated":true,"entry":true},{"id":"no","ing":["no"],"layer":1,"x":415.0,"y":476.0,"name":"random walk","section":null,"treated":true,"entry":true},{"id":"lv","ing":["lv"],"layer":1,"x":415.0,"y":384.0,"name":"leverage","section":null,"treated":false,"entry":false},{"id":"lvcd","ing":["lv","cd"],"layer":2,"x":715.0,"y":522.0,"name":"leverage, fixed ratio","section":null,"treated":false,"entry":false},{"id":"ex","ing":["ex"],"layer":1,"x":415.0,"y":292.0,"name":"uninvested pile, spent down","section":null,"treated":true,"entry":false},{"id":"drno","ing":["dr","no"],"layer":2,"x":715.0,"y":246.0,"name":"geometric Brownian motion","section":"sec:III","treated":true,"entry":false},{"id":"drlv","ing":["dr","lv"],"layer":2,"x":715.0,"y":154.0,"name":"leveraged growth","section":"sec:II.3","treated":true,"entry":false},{"id":"drlvcd","ing":["dr","lv","cd"],"layer":3,"x":1015.0,"y":246.0,"name":"constant debt-to-assets leverage","section":"sec:II.4","treated":true,"entry":false},{"id":"drex","ing":["dr","ex"],"layer":2,"x":715.0,"y":62.0,"name":"drift + expenses","section":null,"treated":false,"entry":false},{"id":"nolv","ing":["no","lv"],"layer":2,"x":715.0,"y":614.0,"name":"noise + leverage","section":null,"treated":false,"entry":false},{"id":"nolvcd","ing":["no","lv","cd"],"layer":3,"x":1015.0,"y":614.0,"name":"noise + leverage, fixed ratio","section":null,"treated":false,"entry":false},{"id":"noex","ing":["no","ex"],"layer":2,"x":715.0,"y":430.0,"name":"noise + expenses","section":null,"treated":false,"entry":false},{"id":"lvex","ing":["lv","ex"],"layer":2,"x":715.0,"y":338.0,"name":"leverage + expenses","section":null,"treated":false,"entry":false},{"id":"lvexcd","ing":["lv","ex","cd"],"layer":3,"x":1015.0,"y":430.0,"name":"leverage + expenses, fixed ratio","section":null,"treated":false,"entry":false},{"id":"drnolv","ing":["dr","no","lv"],"layer":3,"x":1015.0,"y":338.0,"name":"leverage under uncertainty","section":"sec:IV","treated":true,"entry":false},{"id":"drnolvcd","ing":["dr","no","lv","cd"],"layer":4,"x":1315.0,"y":384.0,"name":"leverage under uncertainty, fixed ratio","section":"sec:IV.2","treated":true,"entry":false},{"id":"drnoex","ing":["dr","no","ex"],"layer":3,"x":1015.0,"y":154.0,"name":"drift + noise + expenses","section":null,"treated":false,"entry":false},{"id":"drlvex","ing":["dr","lv","ex"],"layer":3,"x":1015.0,"y":62.0,"name":"expense-funded debt","section":"sec:II.8","treated":true,"entry":false},{"id":"drlvexcd","ing":["dr","lv","ex","cd"],"layer":4,"x":1315.0,"y":200.0,"name":"debt + expenses, fixed ratio","section":null,"treated":false,"entry":false},{"id":"nolvex","ing":["no","lv","ex"],"layer":3,"x":1015.0,"y":522.0,"name":"noise + leverage + expenses","section":null,"treated":false,"entry":false},{"id":"nolvexcd","ing":["no","lv","ex","cd"],"layer":4,"x":1315.0,"y":476.0,"name":"noise + leverage + expenses, fixed ratio","section":null,"treated":false,"entry":false},{"id":"drnolvex","ing":["dr","no","lv","ex"],"layer":4,"x":1315.0,"y":292.0,"name":"leveraged expenses","section":"sec:Va","treated":true,"entry":false},{"id":"drnolvexcd","ing":["dr","no","lv","ex","cd"],"layer":5,"x":1615.0,"y":338.0,"name":"leverage funding living expenses","section":"sec:Va","treated":true,"entry":false}],"edges":[{"a":"empty","b":"dr"},{"a":"empty","b":"no"},{"a":"empty","b":"lv"},{"a":"empty","b":"ex"},{"a":"dr","b":"drno"},{"a":"dr","b":"drlv"},{"a":"dr","b":"drex"},{"a":"no","b":"drno"},{"a":"no","b":"nolv"},{"a":"no","b":"noex"},{"a":"lv","b":"lvcd"},{"a":"lv","b":"drlv"},{"a":"lv","b":"nolv"},{"a":"lv","b":"lvex"},{"a":"lvcd","b":"drlvcd"},{"a":"lvcd","b":"nolvcd"},{"a":"lvcd","b":"lvexcd"},{"a":"ex","b":"drex"},{"a":"ex","b":"noex"},{"a":"ex","b":"lvex"},{"a":"drno","b":"drnolv"},{"a":"drno","b":"drnoex"},{"a":"drlv","b":"drlvcd"},{"a":"drlv","b":"drnolv"},{"a":"drlv","b":"drlvex"},{"a":"drlvcd","b":"drnolvcd"},{"a":"drlvcd","b":"drlvexcd"},{"a":"drex","b":"drnoex"},{"a":"drex","b":"drlvex"},{"a":"nolv","b":"nolvcd"},{"a":"nolv","b":"drnolv"},{"a":"nolv","b":"nolvex"},{"a":"nolvcd","b":"drnolvcd"},{"a":"nolvcd","b":"nolvexcd"},{"a":"noex","b":"drnoex"},{"a":"noex","b":"nolvex"},{"a":"lvex","b":"lvexcd"},{"a":"lvex","b":"drlvex"},{"a":"lvex","b":"nolvex"},{"a":"lvexcd","b":"drlvexcd"},{"a":"lvexcd","b":"nolvexcd"},{"a":"drnolv","b":"drnolvcd"},{"a":"drnolv","b":"drnolvex"},{"a":"drnolvcd","b":"drnolvexcd"},{"a":"drnoex","b":"drnolvex"},{"a":"drlvex","b":"drlvexcd"},{"a":"drlvex","b":"drnolvex"},{"a":"drlvexcd","b":"drnolvexcd"},{"a":"nolvex","b":"nolvexcd"},{"a":"nolvex","b":"drnolvex"},{"a":"nolvexcd","b":"drnolvexcd"},{"a":"drnolvex","b":"drnolvexcd"}],"layerCounts":{"0":1,"1":4,"2":7,"3":7,"4":4,"5":1},"crossings":52,"width":1730,"height":676};
+
+var ING_WORD = { dr: "drift", no: "noise", lv: "leverage", ex: "living expenses", cd: "constant debt-to-assets" };
+var FLAG_KEYS = ["dr", "no", "lv", "ex", "cd"];
+var NODE_W = 190, NODE_H = 58;
+var SVGNS = "http://www.w3.org/2000/svg";
+var XHTMLNS = "http://www.w3.org/1999/xhtml";
+
+// ---- mechanical checks: fail loudly rather than render something wrong ----
+if (DATA.nodes.length !== 24) {
+  throw new Error("expected 24 nodes, found " + DATA.nodes.length);
+}
+if (DATA.edges.length !== 52) {
+  throw new Error("expected 52 edges, found " + DATA.edges.length);
+}
+(function verifyTreatedCount() {
+  var n = DATA.nodes.filter(function (d) { return d.treated; }).length;
+  if (n !== 11) throw new Error("expected 11 treated nodes, found " + n);
+})();
+(function verifyEdgeRule() {
+  var byId = {};
+  DATA.nodes.forEach(function (n) { byId[n.id] = n.ing.slice().sort(); });
+  DATA.edges.forEach(function (e) {
+    var a = byId[e.a], b = byId[e.b];
+    if (!a || !b) throw new Error("edge references unknown node: " + e.a + " " + e.b);
+    var sa = a.slice(), sb = b.slice();
+    var diff = 0, seen = {};
+    sa.forEach(function (i) { seen[i] = (seen[i] || 0) + 1; });
+    sb.forEach(function (i) { seen[i] = (seen[i] || 0) - 1; });
+    Object.keys(seen).forEach(function (k) { if (seen[k] !== 0) diff++; });
+    if (diff !== 1) throw new Error("edge " + e.a + "-" + e.b + " does not differ by exactly one ingredient");
+  });
+})();
+
+// ---- adjacency, for hover highlighting ----
+var adj = {};
+DATA.nodes.forEach(function (n) { adj[n.id] = []; });
+DATA.edges.forEach(function (e) { adj[e.a].push(e.b); adj[e.b].push(e.a); });
+
+function svgEl(tag, attrs) {
+  var el = document.createElementNS(SVGNS, tag);
+  for (var k in attrs) el.setAttribute(k, attrs[k]);
+  return el;
+}
+
+function buildHref(node) {
+  var f = {};
+  FLAG_KEYS.forEach(function (k) { f[k] = node.ing.indexOf(k) > -1 ? 1 : 0; });
+  return "toggle_public.html#t=d&dr=" + f.dr + "&no=" + f.no + "&lv=" + f.lv + "&ex=" + f.ex + "&cd=" + f.cd;
+}
+
+function ingredientLine(node) {
+  if (node.ing.length === 0) return "no ingredients (constant price)";
+  return node.ing.map(function (k) { return ING_WORD[k]; }).join(" · ");
+}
+
+// ---- build the SVG ----
+var svg = document.getElementById("lattice");
+svg.setAttribute("width", DATA.width);
+svg.setAttribute("height", DATA.height);
+svg.setAttribute("viewBox", "0 0 " + DATA.width + " " + DATA.height);
+
+// column headers: ingredient count, 0 (fewest) on the left to 5 (all) on the right
+var colX = {};
+DATA.nodes.forEach(function (n) { colX[n.layer] = n.x; });
+Object.keys(DATA.layerCounts).forEach(function (layer) {
+  var t = svgEl("text", { x: colX[layer], y: 20, class: "col-head" });
+  t.appendChild(document.createTextNode(layer + " ingredient" + (layer == 1 ? "" : "s") + " — "));
+  var tn = document.createElementNS(SVGNS, "tspan");
+  tn.setAttribute("class", "n");
+  tn.textContent = DATA.layerCounts[layer] + " node" + (DATA.layerCounts[layer] == 1 ? "" : "s");
+  t.appendChild(tn);
+  svg.appendChild(t);
+});
+
+// edges, drawn first so nodes sit on top
+var edgeEls = {};
+var edgeGroup = svgEl("g", { class: "edges" });
+svg.appendChild(edgeGroup);
+var nodeById = {};
+DATA.nodes.forEach(function (n) { nodeById[n.id] = n; });
+
+DATA.edges.forEach(function (e) {
+  var a = nodeById[e.a], b = nodeById[e.b];
+  var line = svgEl("line", {
+    x1: a.x, y1: a.y, x2: b.x, y2: b.y, class: "edge"
+  });
+  edgeGroup.appendChild(line);
+  var key = e.a + "|" + e.b;
+  edgeEls[key] = line;
+});
+
+function edgesOf(id) {
+  return DATA.edges.filter(function (e) { return e.a === id || e.b === id; })
+    .map(function (e) { return edgeEls[e.a + "|" + e.b]; });
+}
+
+// nodes
+var nodeGroup = svgEl("g", { class: "nodes" });
+svg.appendChild(nodeGroup);
+var nodeEls = {};
+
+DATA.nodes.forEach(function (n) {
+  var a = document.createElementNS(SVGNS, "a");
+  a.setAttribute("href", buildHref(n));
+  a.setAttribute("class", "node-link");
+  a.setAttribute("aria-label", n.name + " — " + ingredientLine(n) + (n.treated ? ", treated in the document" : ", not treated in the document"));
+
+  var g = svgEl("g", { class: "node" + (n.treated ? " treated" : "") + (n.entry ? " entry" : ""), "data-id": n.id });
+
+  var rect = svgEl("rect", {
+    x: n.x - NODE_W / 2, y: n.y - NODE_H / 2,
+    width: NODE_W, height: NODE_H, rx: 9, ry: 9,
+    class: "node-box"
+  });
+  g.appendChild(rect);
+
+  var fo = svgEl("foreignObject", {
+    x: n.x - NODE_W / 2 + 4, y: n.y - NODE_H / 2 + 2,
+    width: NODE_W - 8, height: NODE_H - 4,
+    class: "node-fo"
+  });
+  var div = document.createElementNS(XHTMLNS, "div");
+  div.setAttribute("class", "node-label");
+  div.textContent = n.name;
+  fo.appendChild(div);
+  g.appendChild(fo);
+
+  if (n.entry) {
+    var badge = svgEl("g", { class: "entry-badge" });
+    var cx = n.x - NODE_W / 2 + 2, cy = n.y - NODE_H / 2 + 2;
+    badge.appendChild(svgEl("circle", { cx: cx, cy: cy, r: 9 }));
+    var bt = svgEl("text", { x: cx, y: cy + 1 });
+    bt.textContent = "★";
+    badge.appendChild(bt);
+    g.appendChild(badge);
+  }
+
+  a.appendChild(g);
+  nodeGroup.appendChild(a);
+  nodeEls[n.id] = { a: a, g: g };
+});
+
+// ---- hover / focus interaction ----
+var tooltip = document.getElementById("tooltip");
+
+function statusLine(n) {
+  if (n.treated) {
+    return n.section ? "treated — §" + n.section.replace("sec:", "") : "treated";
+  }
+  return "not treated in the document (provisional call)";
+}
+
+function showTooltip(n, x, y) {
+  tooltip.innerHTML =
+    '<span class="t-name">' + n.name + '</span>' +
+    '<span class="t-ing">' + ingredientLine(n) + '</span>' +
+    '<span class="t-status' + (n.treated ? ' is-treated' : '') + '">' + statusLine(n) + '</span>';
+  tooltip.classList.add("show");
+  positionTooltip(x, y);
+}
+
+function positionTooltip(x, y) {
+  var pad = 14;
+  var vw = window.innerWidth, vh = window.innerHeight;
+  tooltip.style.left = "0px";
+  tooltip.style.top = "0px";
+  var tw = tooltip.offsetWidth, th = tooltip.offsetHeight;
+  var left = x + pad, top = y + pad;
+  if (left + tw > vw - 8) left = x - tw - pad;
+  if (top + th > vh - 8) top = y - th - pad;
+  if (left < 4) left = 4;
+  if (top < 4) top = 4;
+  tooltip.style.left = left + "px";
+  tooltip.style.top = top + "px";
+}
+
+function hideTooltip() { tooltip.classList.remove("show"); }
+
+function setHover(id) {
+  var neighbours = id ? adj[id].concat([id]) : null;
+  DATA.nodes.forEach(function (n) {
+    var el = nodeEls[n.id].g;
+    el.classList.remove("hi", "dim");
+    if (!id) return;
+    if (n.id === id) el.classList.add("hi");
+    else if (neighbours.indexOf(n.id) > -1) { /* neighbour: neutral */ }
+    else el.classList.add("dim");
+  });
+  DATA.edges.forEach(function (e) {
+    var el = edgeEls[e.a + "|" + e.b];
+    el.classList.remove("hi", "dim");
+    if (!id) return;
+    if (e.a === id || e.b === id) el.classList.add("hi");
+    else el.classList.add("dim");
+  });
+}
+
+DATA.nodes.forEach(function (n) {
+  var a = nodeEls[n.id].a;
+  a.addEventListener("mouseenter", function (ev) {
+    setHover(n.id);
+    showTooltip(n, ev.clientX, ev.clientY);
+  });
+  a.addEventListener("mousemove", function (ev) {
+    positionTooltip(ev.clientX, ev.clientY);
+  });
+  a.addEventListener("mouseleave", function () {
+    setHover(null);
+    hideTooltip();
+  });
+  a.addEventListener("focus", function () {
+    setHover(n.id);
+    var r = nodeEls[n.id].g.querySelector(".node-box").getBoundingClientRect();
+    showTooltip(n, r.right, r.top);
+  });
+  a.addEventListener("blur", function () {
+    setHover(null);
+    hideTooltip();
+  });
+});
+
+// ---- chrome ----
+document.getElementById("back").addEventListener("click", function () { history.back(); });
+
+}());
+</script>
+</body>
+</html>
