@@ -9,3 +9,6 @@ content); no page here is edited by hand.
 - **[The toggle page](https://tomer-boyarski.github.io/leverage-public/toggle_public.html)** —
   one model at a time, chosen by switching ingredients on and off; every node
   is a small self-contained paper with interactive figures.
+- **[The linear document](https://tomer-boyarski.github.io/leverage-public/leverage_theory_public.html)** —
+  the full theory as one continuous paper: foldable numbered sections,
+  hover-annotated symbols, interactive figures, light and dark mode.
